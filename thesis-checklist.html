@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat|Raleway" rel="stylesheet">
+  <title>Document</title>
+
+  <style>
+
+      h1, h2, h3, h4 {
+        font-family: 'Montserrat', sans-serif;
+      }
+
+      div, p, input, span {
+        font-family: 'Raleway', sans-serif;
+      }
+
+      input {
+        margin: 10px;
+      }
+
+      span {
+        margin-right: 10px;
+      }
+
+      #headtitle {
+        text-align: center;
+        color: black;
+      }
+
+      .title {
+        color: #85144b;
+      }
+
+      .notesButton {
+        border: 1px solid coral;
+        color: coral;
+      }
+
+      .remarksButton {
+        border: 1px solid #3D9970;
+        color: #3D9970;
+      }
+
+      .notes {
+        position: absolute;
+        display: inline-block;
+        transform: translateY(-50%);
+        margin: 20px;
+        width: 30vw;
+        font-size: 0.8em;
+        line-height: 1.8em;
+        text-align: justify;
+        border: 1px solid crimson;
+        background-color: #FFF2ED;
+        padding: 10px;
+      }
+
+      .remarks {
+        position: absolute;
+        display: inline-block;
+        transform: translateY(-50%);
+        margin: 10px;
+        width: 30vw;
+        font-size: 0.8em;
+        line-height: 1.8em;
+        text-align: justify;
+        border: 1px solid #276248;
+        background-color: #EBF4F0;
+        padding: 10px;
+      }
+  </style>
+</head>
+<body>
+  <h1 id="headtitle">THESIS CHECKLIST</h1>
+  <form id="general">
+    <h3 class="title">General</h3>
+  </form>
+
+  <form id="chapter-one">
+    <h3 class="title">Chapter 1</h3>
+  </form>
+
+  <form id="chapter-two">
+    <h3 class="title">Chapter 2</h3>
+  </form>
+
+  <form id="chapter-three">
+    <h3 class="title">Chapter 3</h3>
+  </form>
+
+  <form id="chapter-four">
+    <h3 class="title">Chapter 4</h3>
+  </form>
+
+  <form id="chapter-five">
+    <h3 class="title">Chapter 5</h3>
+  </form>
+
+
+</body>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/5.4.2/firebase.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.3.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.3.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.4.1/firebase-auth.js"></script>
+
+
+<!-- ENV -->
+<script>
+  let email;
+  let password;
+</script>
+<script src='env.js'></script>
+
+
+<!-- JAVASCRIPT -->
+<script>
+
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyCeYT1HvbJjte8rviu2Xz44j2hN7jjqOhA",
+    authDomain: "thesis-checklist.firebaseapp.com",
+    databaseURL: "https://thesis-checklist.firebaseio.com",
+    projectId: "thesis-checklist",
+    storageBucket: "thesis-checklist.appspot.com",
+    messagingSenderId: "163730624940"
+  };
+
+  firebase.initializeApp(config);
+
+  if(email && password){
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(function (user) {
+        window.localStorage.removeItem('emailForSignIn');
+      })
+      .catch(function(error) {
+        console.log("Some error occurred, you can inspect the code:", error.code);
+      });
+  }
+
+
+  // Initialize Cloud Firestore through Firebase
+  var db = firebase.firestore();
+
+  const settings = {timestampsInSnapshots: true};
+  db.settings(settings);
+
+  function fetchData(collection, element) {
+    let currentElement = element;
+    db.collection(collection)
+    .get()
+    .then((querySnapshot) => {
+      handleData(querySnapshot, collection, currentElement);
+    });
+  }
+
+  function handleData(querySnapshot, collection, element) {
+    let currentCollection = collection;
+    let tasks = [];
+
+    querySnapshot.forEach((doc) => {
+      let task = [];
+      task.push(doc.data().content);
+      task.push(doc.data().isChecked);
+      task.push(doc.data().notes);
+      task.push(doc.data().remarks);
+      task.push(doc.id); // task id as task[4]
+
+      tasks.push(task);
+    });
+
+    addTasks(currentCollection, tasks, element);
+  }
+
+  function fetchAllData() {
+
+    let collections = [
+      ["general", "#general"],
+      ["chapterOne", "#chapter-one"],
+      ["chapterTwo", "#chapter-two"],
+      ["chapterThree", "#chapter-three"],
+      ["chapterFour", "#chapter-four"],
+      ["chapterFive", "#chapter-five"]
+    ];
+
+    for(let collection of collections) {
+      fetchData(collection[0], collection[1]);
+    };
+  }
+
+  function clearScreen() {
+    document.querySelectorAll('input').forEach((node) => {
+      node.remove();
+    })
+    document.querySelectorAll('span').forEach((node) => {
+      node.remove();
+    })
+    document.querySelectorAll('button').forEach((node) => {
+      node.remove();
+    })
+    document.querySelectorAll('br').forEach((node) => {
+      node.remove();
+    })
+  }
+
+  function openNote(element, note, style) {
+    let body = document.querySelector('body');
+    let notesBox = document.createElement('div');
+
+    notesBox.classList.add(style);
+    notesBox.innerHTML = note;
+    notesBox.addEventListener('click', function() {
+      notesBox.remove();
+    })
+    element.after(notesBox);
+  }
+
+  function removeNotesAndRemarks() {
+    let notes = document.querySelectorAll('.notes');
+    let remarks = document.querySelectorAll('.remarks');
+    for (let note of notes) {
+      note.remove();
+    }
+    for (let remark of remarks) {
+      remark.remove();
+    }
+  }
+
+  function createNoteOrRemarkButton(checklist, noteOrRemark, style) {
+    let newButton = document.createElement('button');
+    style === "notes" ? newButton.innerHTML = "notes" : newButton.innerHTML = "closing remarks";
+    style === "notes" ? newButton.classList.add("notesButton") : newButton.classList.add("remarksButton");
+
+    newButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      removeNotesAndRemarks();
+      openNote(e.target, noteOrRemark, style);
+    })
+
+    return newButton;
+  }
+
+  // function addRemarks(parentElement, siblingElementBefore, remarks) {
+  //   let newNote = createNoteOrRemarkButton(parentElement, remarks, "remarks");
+  //   newNote.innerHTML = "closing remarks";
+  //   newNote.classList.add('remarkButton');
+  //   siblingElementBefore.after(newNote);
+  // }
+
+  function createCheckBox(checkBoxID, isChecked) {
+    let checkBox = document.createElement('input');
+    checkBox.type = 'checkbox';
+    checkBox.id = checkBoxID;
+    isChecked && checkBox.setAttribute("checked", "checked")
+
+    return checkBox;
+  }
+
+  function addCheckBoxEvents(checkBox, checkedOrNot, collectionName) {
+    checkBox.addEventListener('click', function(e) {
+      removeNotesAndRemarks();
+      if(checkedOrNot) {
+        modifyCheckValue(collectionName, e.target.id, false);
+        clearScreen();
+      } else {
+        modifyCheckValue(collectionName, e.target.id, true);
+        clearScreen();
+      }
+    })
+  }
+
+  function addNoteAndRemarkButtons(checkBoxID, checklist, isChecked, task, notes, remarks) {
+    // if there are notes for the task, add a notes button next to it
+    if(!isChecked) {
+      task.style.textDecoration = null;
+      if(notes) {
+        let newNoteButton = createNoteOrRemarkButton(checklist, notes, "notes");
+        newNoteButton.id = "notebutton-" + checkBoxID;
+        task.after(newNoteButton);
+      }
+    }
+    // if the task is completed and there are closing remarks, show them
+    if(isChecked) {
+      task.style.textDecoration = "line-through"
+      if(remarks) {
+        let newRemarkButton = createNoteOrRemarkButton(checklist, remarks, "remarks");
+        newRemarkButton.id = "remarkbutton-" + checkBoxID;
+        task.after(newRemark);
+      }
+    }
+  }
+
+  function createTask(content, isChecked) {
+    let task = document.createElement('span');
+    task.innerHTML = content;
+    isChecked && task.setAttribute("style", "text-decoration: line-through");
+    return task;
+  }
+
+  function addTasks(collection, tasks, element) {
+    const checklist = document.querySelector(element);
+    let currentCollection = collection
+
+    for (let task of tasks) {
+      let checkBox = createCheckBox(task[4], task[1]);
+      let currentTask = createTask(task[0], task[1]);
+      let newLine = document.createElement('br');
+      let isChecked = task[1]
+      let notes = task[2];
+      let remarks = task[3];
+
+      checklist.appendChild(checkBox);
+      checklist.appendChild(currentTask);
+
+      addNoteAndRemarkButtons(checkBox.id, checklist, isChecked, currentTask, notes, remarks)
+      email ? addCheckBoxEvents(checkBox, isChecked, currentCollection) :
+              dummyCheckBoxEvents(checklist, checkBox, currentTask, isChecked, notes, remarks);
+
+      checklist.appendChild(newLine);
+    }
+  }
+
+  function modifyCheckValue(collection, id, value) {
+    db.collection(collection).doc(id).set({
+      isChecked: value
+    }, { merge: true }).then(function() {
+        console.log("Document successfully written!");
+    })
+    .then(function(){
+      fetchAllData();
+    })
+    .catch(function(error) {
+        console.error("Error writing document: ", error);
+    });
+  }
+
+  function dummyCheckBoxEvents(checklist, checkBox, task, isChecked, notes, remarks) {
+    checkBox.addEventListener("click", function(e) {
+      if(e.target.checked) {
+        task.style = "text-decoration: line-through"
+        document.querySelectorAll('button').forEach((node)=>{
+          if(node.id === "notebutton-" + checkBox.id ||
+             node.id === "remarkbutton-" + checkBox.id) {
+               console.log(node);
+               node.remove();
+             }
+          });
+      } else {
+        task.style = "text-decoration: null"
+        addNoteAndRemarkButtons(checkBox.id, checklist, isChecked, task, notes, remarks)
+      }
+    })
+  }
+
+  fetchAllData();
+
+</script>
+</html>
